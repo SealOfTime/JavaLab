@@ -1,8 +1,11 @@
 package ru.sealoftime.labjava.core.view.cli;
 
+import ru.sealoftime.labjava.core.model.response.Response;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 public class CommandRegistry {
     private Map<String, Command> commands;

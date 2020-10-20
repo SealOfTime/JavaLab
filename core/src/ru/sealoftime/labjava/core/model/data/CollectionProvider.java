@@ -42,7 +42,10 @@ public abstract class CollectionProvider implements DataProvider{
 
         @Override
         public int removeFirst(){
-            return this.qRef.poll().getId();
+            var first = this.qRef.poll();
+            if(first != null)
+                return first.getId();
+            return -1;
         }
 
     }

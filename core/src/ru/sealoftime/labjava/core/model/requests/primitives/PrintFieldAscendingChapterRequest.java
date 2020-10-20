@@ -39,6 +39,6 @@ public class PrintFieldAscendingChapterRequest extends Request {
                                         .sorted ( Comparator.comparing(SpaceMarine::getChapter) )
                                         .map    ( fieldsToGetters.get(this.fieldName)           )
                                         .collect( Collectors.toList()                           );
-        return new ListResponse<>(Response.ResponseStatus.SUCCESS, list);
+        return new ListResponse<>("print_field_ascending_chapter", list);
     }
 }

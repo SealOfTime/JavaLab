@@ -15,6 +15,6 @@ public class ExecuteScriptRequest extends Request {
     @Override
     public Response execute(ApplicationContext ctx) {
         //TODO: execute script блять
-        return Response.fail("application.error.not_implemented");
+        return Response.fail("execute_script", "application.error.not_implemented");
     }
 }

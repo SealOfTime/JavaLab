@@ -12,8 +12,8 @@ import java.util.List;
 @FieldDefaults(makeFinal = true, level= AccessLevel.PRIVATE)
 public class ListResponse<T extends Serializable> extends Response{
     List<T> data;
-    public ListResponse(ResponseStatus status, List<T> data) {
-        super(status);
+    public ListResponse(String cmd, List<T> data) {
+        super(ResponseStatus.SUCCESS, cmd);
         this.data = data;
     }
 

@@ -17,9 +17,9 @@ public class RemoveByIdRequest extends Request {
     public Response execute(ApplicationContext ctx) {
         if(ctx.getDataProvider().removeIf((s)->s.getId().equals(this.id))) {
             ctx.getEventBus().notify(new RemoveObjectsEvent(new Integer[]{this.id}));
-            return new Response(Response.ResponseStatus.SUCCESS);
+            return Response.success("remove_by_id");
         }
         else
-            return Response.fail("application.error.no_such_object");
+            return Response.fail("remove_by_id","application.error.no_such_object");
     }
 }

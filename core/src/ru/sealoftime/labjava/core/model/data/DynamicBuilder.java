@@ -6,6 +6,9 @@ import lombok.experimental.FieldDefaults;
 import ru.sealoftime.labjava.core.model.data.concrete.SpaceMarine;
 import ru.sealoftime.labjava.core.util.UnsafeFunction;
 
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
@@ -13,9 +16,9 @@ import java.util.function.Supplier;
 @Getter
 public class DynamicBuilder<O> {
 
-    private Set<Property<?>> properties;
+    private List<Property<?>> properties;
     public DynamicBuilder(Property<?>... props){
-        this.properties = Set.of(props);
+        this.properties = new LinkedList<>(List.of(props));
     }
     public <T> DynamicBuilder<O> simple(String name, boolean nullable, BiConsumer<O, T> setter, UnsafeFunction<String, T, ? extends Exception> parser){
         this.properties.add(new SimpleProperty<T>(name, nullable, setter, parser));

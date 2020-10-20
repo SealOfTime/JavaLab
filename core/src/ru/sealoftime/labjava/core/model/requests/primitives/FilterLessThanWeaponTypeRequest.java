@@ -25,6 +25,6 @@ public class FilterLessThanWeaponTypeRequest extends Request {
                           .stream()
                           .filter ( sm -> sm.getWeaponType().compareTo(this.weapon) > 0)
                           .collect( Collectors.toList() );
-        return new ListResponse<>(Response.ResponseStatus.SUCCESS, filtered);
+        return new ListResponse<>("filter_less_than_weapon_type", filtered);
     }
 }

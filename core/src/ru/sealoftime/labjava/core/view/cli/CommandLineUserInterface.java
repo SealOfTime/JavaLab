@@ -2,6 +2,8 @@ package ru.sealoftime.labjava.core.view.cli;
 
 import ru.sealoftime.labjava.core.Application;
 import ru.sealoftime.labjava.core.ApplicationContext;
+import ru.sealoftime.labjava.core.model.response.ListResponse;
+import ru.sealoftime.labjava.core.model.response.Response;
 import ru.sealoftime.labjava.core.util.Either;
 import ru.sealoftime.labjava.core.view.UserInterface;
 
@@ -13,7 +15,6 @@ public class CommandLineUserInterface extends UserInterface implements TextExecu
     public Scanner sc;
 
     private CommandRegistry commandRegistry;
-    private ResourceBundle localisation;
     private ApplicationContext ctx;
 
     private LinkedList<String> history;
@@ -22,7 +23,6 @@ public class CommandLineUserInterface extends UserInterface implements TextExecu
         this.commandRegistry = cr;
         this.sc = new Scanner(System.in);
         this.ctx = ctx;
-        this.localisation = ctx.getCurrentLanguageBundle();
         this.history = new LinkedList<>();
     }
 
@@ -33,16 +33,28 @@ public class CommandLineUserInterface extends UserInterface implements TextExecu
                 return;
 
             String[] input = rawInput.split("\\s+");
-
-            Command commandOrNone = this.commandRegistry.get(input[0]);
+            var command = input[0];
+            Command commandOrNone = this.commandRegistry.get(command);
             if(commandOrNone == null)
                 this.print("commandline.error.no_such_command");
             else {
-                history.add(input[0]);
+                history.add(command);
                 if(history.size() > 10) history.poll();
 
                 var req = commandOrNone.constructRequest(this, this.ctx, input);
-                req.ifPresent(request -> this.ctx.getRequestExecutor().execute(request));
+                if(req.isPresent()) {
+                    var resp = this.ctx.getRequestExecutor().execute(req.get());
+                    if(resp.getStatus().equals(Response.ResponseStatus.SUCCESS)){
+                        this.ctx.getEventBus().notify(resp);
+//                        this.print("commandline.command." + command + ".success");
+//                        if(resp instanceof ListResponse){
+//                            var listResponse = (ListResponse<?>)resp;
+//                            for(Object o : listResponse.getData())
+//                                this.print(o.toString());
+//                        }
+                    }else
+                        this.print(((Response.ErrorResponse)resp).getErrorMessage());
+                }
             }
         }
     }
@@ -55,7 +67,7 @@ public class CommandLineUserInterface extends UserInterface implements TextExecu
     @Override
     public void print(String rawOutput, Object... data){
         try {
-            System.out.printf(localisation.getString(rawOutput), data);
+            System.out.printf(this.ctx.getCurrentLanguageBundle().getString(rawOutput), data);
         }catch(MissingResourceException e){
             System.out.println(rawOutput + " " + Arrays.deepToString(data));
         }

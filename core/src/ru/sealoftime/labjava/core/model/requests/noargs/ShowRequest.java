@@ -6,6 +6,8 @@ import ru.sealoftime.labjava.core.ApplicationContext;
 import ru.sealoftime.labjava.core.model.data.concrete.SpaceMarine;
 import ru.sealoftime.labjava.core.model.events.ShowEvent;
 import ru.sealoftime.labjava.core.model.requests.Request;
+import ru.sealoftime.labjava.core.model.response.ListResponse;
+import ru.sealoftime.labjava.core.model.response.Response;
 
 import java.util.List;
 
@@ -14,12 +16,7 @@ import java.util.List;
 public class ShowRequest extends Request {
     @Override
     public Response execute(ApplicationContext ctx) {
-        ctx.getEventBus().notify(
-                new ShowEvent(
-                        List.of(
-                                ctx.getDataProvider().toArray(SpaceMarine[]::new)
-                        )
-                )
-        );
+        return new ListResponse<SpaceMarine>("show",
+                List.of( ctx.getDataProvider().toArray(SpaceMarine[]::new) ));
     }
 }

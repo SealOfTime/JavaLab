@@ -17,6 +17,6 @@ public class ClearRequest extends Request {
     public Response execute(ApplicationContext ctx) {
         ctx.getDataProvider().clear();
         ctx.getEventBus().notify(new ClearEvent());
-        return new Response(Response.ResponseStatus.SUCCESS);
+        return Response.success("clear");
     }
 }

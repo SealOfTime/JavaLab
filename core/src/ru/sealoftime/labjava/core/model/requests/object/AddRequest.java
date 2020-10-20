@@ -16,6 +16,6 @@ public class AddRequest extends ObjectRequest{
         var object = this.getObject();
         ctx.getDataProvider().add(object);
         ctx.getEventBus().notify(new AddObjectEvent(object));
-        return Response.success();
+        return Response.success("add");
     }
 }

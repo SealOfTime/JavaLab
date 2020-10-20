@@ -27,7 +27,7 @@ public class SpaceMarineCSVFileLoader extends CSVFileLoader<SpaceMarine> {
 
     //todo: это не билдер, это ваще кек и рофл
     private static final DynamicBuilder<SpaceMarine> builder = new DynamicBuilder<SpaceMarine>()
-            .simple("id",   false, SpaceMarine::setId,   Integer::parseInt)
+            .simple("id",   false, (sm, id)->{sm.setId(id); SpaceMarine.markIdUsed(id);},   Integer::parseInt)
             .simple("name", false, SpaceMarine::setName, s->s            )
             .complex("coordinates", false, SpaceMarine::setCoordinates, Coordinates::new, new DynamicBuilder<Coordinates>()
                 .simple("x", false, Coordinates::setX, Float::parseFloat)
@@ -48,21 +48,24 @@ public class SpaceMarineCSVFileLoader extends CSVFileLoader<SpaceMarine> {
             throw new IllegalArgumentException("commandline.request_construct.error.spacemarine.not_enough_fields");
         var index = 0;
         for(DynamicBuilder<SpaceMarine>.Property<?> p : builder.getProperties()){
-          if(!p.isComplex()){
-              reconstructSimpleProperty(sm, lines[index], (DynamicBuilder<SpaceMarine>.SimpleProperty<?>)p);
-          }else{
-              index = reconstructComplexProperty(sm, lines, index, (DynamicBuilder<SpaceMarine>.ComplexProperty<?>)p);
-          }
-
+            if(!p.isComplex()){
+                var valueOrNot = reconstructSimpleProperty(sm, lines[index++], (DynamicBuilder<SpaceMarine>.SimpleProperty<?>)p);
+                if(valueOrNot.isRight()) throw new IllegalArgumentException(valueOrNot.right());
+                if(valueOrNot.left() == null && !p.isNullable()) throw new IllegalArgumentException("commandline.request_construct.error." + p.getName() + "_invalid");
+            }else{
+                index = reconstructComplexProperty(sm, lines, index, (DynamicBuilder<SpaceMarine>.ComplexProperty<?>)p);
+            }
         }
 
         return sm;
     }
-    private static <O, T> void reconstructSimpleProperty(O obj, String line, DynamicBuilder<O>.SimpleProperty<T> p){
+    private static <O, T> Either<T, String> reconstructSimpleProperty(O obj, String line, DynamicBuilder<O>.SimpleProperty<T> p){
         var valueOrNot = valueFromString(line, p.getName(), p.isNullable(), obj, p.getParser());
         if(valueOrNot.isRight())
-            throw new IllegalArgumentException(valueOrNot.right());
-        p.getSetter().accept(obj, valueOrNot.left());
+            return valueOrNot;
+
+        if(p.isNullable()||valueOrNot.left()!=null) p.getSetter().accept(obj, valueOrNot.left());
+        return valueOrNot;
     }
 
     @SuppressWarnings("unchecked")
@@ -71,18 +74,20 @@ public class SpaceMarineCSVFileLoader extends CSVFileLoader<SpaceMarine> {
         var index = i;
         for(DynamicBuilder<T>.Property<?> pp : p.getBuilder().getProperties()){
             if(!pp.isComplex()){
-                reconstructSimpleProperty(object,
-                        lines[index++],
-                        (DynamicBuilder<T>.SimpleProperty<?>)pp);
+                var errors = reconstructSimpleProperty(object,
+                                lines[index++],
+                                (DynamicBuilder<T>.SimpleProperty<?>)pp);
+                if(errors.isRight()) throw new IllegalArgumentException(errors.right());
+                if(errors.left() == null && !pp.isNullable()){
+                    if(p.isNullable()){
+                        p.getSetter().accept(obj, null);
+                        return index;
+                    } else throw new IllegalArgumentException("commandline.request_construct.error." + pp.getName() + "_invalid");
+                }
             }
         }
         p.getSetter().accept(obj, object);
         return index;
-    }
-
-    private static Either<Coordinates, String> reconstructCoordinates(String[] lines){
-//        var xOrNot = valueFromString(lines[2], )
-        return null;
     }
 
     private static <R, T extends Exception> Either<R, String> valueFromString(String raw, String name, boolean nullable, Object obj, UnsafeFunction<String, R, T> parser){
@@ -92,7 +97,8 @@ public class SpaceMarineCSVFileLoader extends CSVFileLoader<SpaceMarine> {
                 value = parser.apply(raw);
 
             var violations = validator.validateFieldValue(obj, obj.getClass().getDeclaredField(name), value);//TODO: this is bs, Validator has its own messaging shit
-            if(violations.isEmpty() && (value !=null || nullable))
+
+            if(violations.isEmpty())
                 return Either.left(value);
             else
                 return Either.right("commandline.request_construct.error." + name + "_invalid");

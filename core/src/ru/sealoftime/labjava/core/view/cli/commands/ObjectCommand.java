@@ -3,6 +3,7 @@ package ru.sealoftime.labjava.core.view.cli.commands;
 import net.sf.oval.Validator;
 import ru.sealoftime.labjava.core.ApplicationContext;
 import ru.sealoftime.labjava.core.model.data.concrete.*;
+import ru.sealoftime.labjava.core.model.response.Response;
 import ru.sealoftime.labjava.core.util.Either;
 import ru.sealoftime.labjava.core.util.UnsafeFunction;
 import ru.sealoftime.labjava.core.view.cli.Command;
@@ -19,6 +20,11 @@ public abstract class ObjectCommand extends Command {
     NumberFormat numberFormat;
     SpaceMarine object;
     TextExecutionContext tec;
+
+    public ObjectCommand() {
+        super();
+    }
+
     public Optional<SpaceMarine> constructSpaceMarine(TextExecutionContext tec, ApplicationContext ctx){
         this.numberFormat = NumberFormat.getInstance(ctx.getCurrentLanguage());
         this.validator = new Validator();

@@ -2,6 +2,7 @@ package ru.sealoftime.labjava.core.model.io;
 
 import ru.sealoftime.labjava.core.model.data.concrete.SpaceMarine;
 
+import java.text.DateFormat;
 import java.util.function.Function;
 
 public class SpaceMarineCSVFileUnloader extends CSVFileUnloader<SpaceMarine>{
@@ -15,13 +16,13 @@ public class SpaceMarineCSVFileUnloader extends CSVFileUnloader<SpaceMarine>{
                 sm.getName(),
                 sm.getCoordinates().getX(),
                 sm.getCoordinates().getY(),
-                sm.getCreationDate(),
+                DateFormat.getDateInstance().format(sm.getCreationDate()),
                 sm.getHealth(),
                 sm.getCategory(),
                 sm.getWeaponType(),
                 sm.getMeleeWeapon(),
-                sm.getChapter().getName(),
-                sm.getChapter().getMarinesCount()
+                sm.getChapter() != null ? sm.getChapter().getName() : null,
+                sm.getChapter() != null ? sm.getChapter().getMarinesCount() : null
         };
     }
 }

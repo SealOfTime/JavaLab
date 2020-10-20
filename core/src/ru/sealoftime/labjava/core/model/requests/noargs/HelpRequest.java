@@ -5,6 +5,8 @@ import lombok.Value;
 import ru.sealoftime.labjava.core.ApplicationContext;
 import ru.sealoftime.labjava.core.model.events.HelpEvent;
 import ru.sealoftime.labjava.core.model.requests.Request;
+import ru.sealoftime.labjava.core.model.response.ListResponse;
+import ru.sealoftime.labjava.core.model.response.Response;
 
 import java.util.Arrays;
 import java.util.List;
@@ -33,6 +35,7 @@ public class HelpRequest extends Request {
 
     @Override
     public Response execute(ApplicationContext ctx) {
-        ctx.getEventBus().notify(new HelpEvent(commandsInfo));
+        //ctx.getEventBus().notify(new HelpEvent(commandsInfo));
+        return new ListResponse<String>("help", commandsInfo); //TODO: turn into HelpResponse
     }
 }

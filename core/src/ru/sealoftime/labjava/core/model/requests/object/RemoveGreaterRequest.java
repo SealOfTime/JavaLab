@@ -29,8 +29,8 @@ public class RemoveGreaterRequest extends ObjectRequest{
                 )
         );
         if(!toRemove.isEmpty())
-            return Response.success();
+            return Response.success("remove_greater");
         else
-            return Response.fail("application.error.remove_greater.no_objects_greater");
+            return Response.fail("remove_greater", "application.error.remove_greater.no_objects_greater");
     }
 }
