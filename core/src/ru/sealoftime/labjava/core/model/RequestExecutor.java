@@ -8,6 +8,8 @@ import ru.sealoftime.labjava.core.model.response.Response;
 public class RequestExecutor {
 
     private ApplicationContext ctx;
+    public ApplicationContext ctx(){ return this.ctx; }
+
     public RequestExecutor(ApplicationContext ctx){
         this.ctx = ctx;
     }

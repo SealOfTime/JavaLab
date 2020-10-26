@@ -12,7 +12,7 @@ import ru.sealoftime.labjava.core.model.response.Response;
 public class HistoryRequest extends Request {
     @Override
     public Response execute(ApplicationContext ctx) {
-        ctx.getEventBus().notify(new HistoryEvent());
+        //ctx.getEventBus().notify(new HistoryEvent());
         return Response.success("history");
         //todo: return new HistoryResponse(ctx.getHistory())
     }

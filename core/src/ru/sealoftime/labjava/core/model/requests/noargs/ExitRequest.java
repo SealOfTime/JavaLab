@@ -14,7 +14,7 @@ public class ExitRequest extends Request {
     @Override
     public Response execute(ApplicationContext ctx) {
         ctx.setIsRunning(false);
-        ctx.getEventBus().notify(new ExitEvent());
+        //ctx.getEventBus().notify(new ExitEvent());
         return Response.success("exit");
     }
 }

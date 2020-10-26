@@ -52,10 +52,6 @@ public class CommandLineEventHandler {
     }
 
 
-    public void onHistory(Event event) {
-        this.cli.printHistory();
-    }
-
     public void onPrint(Event e){
         var event = (PrintEvent) e;
         event.getData().stream().map(Object::toString).forEach(cli::print);

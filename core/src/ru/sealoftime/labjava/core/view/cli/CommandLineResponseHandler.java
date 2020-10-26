@@ -19,6 +19,7 @@ public class CommandLineResponseHandler {
     private final Map<String, Consumer<Response>> callbacks = new HashMap<>();
     {
         callbacks.put("help", this::onHelp);
+        callbacks.put("history", this::onHistory);
         callbacks.put("clear", this.simple("clear"));
         callbacks.put("exit", this.simple("exit"));
         callbacks.put("info", this::onInfo);
@@ -52,6 +53,10 @@ public class CommandLineResponseHandler {
             return;
         }
         callback.accept(resp);
+    }
+
+    public void onHistory(Event event) {
+        this.cli.printHistory();
     }
 
     public void onInfo(Response resp){

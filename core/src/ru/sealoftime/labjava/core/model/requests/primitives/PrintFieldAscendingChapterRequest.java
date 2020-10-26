@@ -36,7 +36,8 @@ public class PrintFieldAscendingChapterRequest extends Request {
     @Override
     public Response execute(ApplicationContext ctx) {
         var list = ctx.getDataProvider().stream ()
-                                        .sorted ( Comparator.comparing(SpaceMarine::getChapter) )
+                                        .sorted ( Comparator.comparing(SpaceMarine::getChapter,
+                                                                       Comparator.nullsLast(Comparator.reverseOrder())))
                                         .map    ( fieldsToGetters.get(this.fieldName)           )
                                         .collect( Collectors.toList()                           );
         return new ListResponse<>("print_field_ascending_chapter", list);

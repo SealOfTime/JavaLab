@@ -1,13 +1,12 @@
-package ru.sealoftime.labjava.core;
+package ru.sealoftime.labjava.server;
 
+import ru.sealoftime.labjava.core.Application;
+import ru.sealoftime.labjava.core.ApplicationContext;
 import ru.sealoftime.labjava.core.model.EventBus;
 import ru.sealoftime.labjava.core.model.RequestExecutor;
-import ru.sealoftime.labjava.core.model.data.CollectionProvider;
-import ru.sealoftime.labjava.core.model.data.DataProvider;
 import ru.sealoftime.labjava.core.model.data.concrete.SpaceMarine;
 import ru.sealoftime.labjava.core.model.data.concrete.Weapon;
 import ru.sealoftime.labjava.core.model.events.*;
-import ru.sealoftime.labjava.core.model.io.FileLoader;
 import ru.sealoftime.labjava.core.model.io.SpaceMarineCSVFileLoader;
 import ru.sealoftime.labjava.core.model.io.SpaceMarineCSVFileUnloader;
 import ru.sealoftime.labjava.core.model.requests.Request;
@@ -21,34 +20,35 @@ import ru.sealoftime.labjava.core.model.response.InfoResponse;
 import ru.sealoftime.labjava.core.model.response.ListResponse;
 import ru.sealoftime.labjava.core.model.response.Response;
 import ru.sealoftime.labjava.core.model.response.SumOfHealthResponse;
-import ru.sealoftime.labjava.core.view.LocalizationService;
+import ru.sealoftime.labjava.core.util.Utf8ResourceBundle;
+import ru.sealoftime.labjava.core.view.UserInterface;
 import ru.sealoftime.labjava.core.view.cli.*;
 import ru.sealoftime.labjava.core.view.cli.commands.ArglessCommand;
 import ru.sealoftime.labjava.core.view.cli.commands.ExecuteScriptCommand;
 import ru.sealoftime.labjava.core.view.cli.commands.ObjectCommand;
 import ru.sealoftime.labjava.core.view.cli.commands.PrintFieldAscedingChapterCommand;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.attribute.BasicFileAttributes;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.*;
 
-public class Application {
+@SuppressWarnings("DuplicatedCode")
+public class ServerApplication {
 
-    private ApplicationContext context;
-    
-    public static void main(String... args){
+    public static List<RemoteUserInterface> clients = new LinkedList<>();
+    public static void main(String[] args) {
         var context = new ApplicationContext();
 
         var locale = Locale.forLanguageTag("ru-RU");
-        var localization = new LocalizationService(locale);
+
+        var localization = new ServerLocalizationService(locale);
         context.setLocalization(localization);
 
         var cr  = registerCommands();
         var cli = new CommandLineUserInterface(cr, context);
 
-        var eventBus = new EventBus();
+        var eventBus = new RemoteEventBus();
         context.setEventBus(eventBus);
 
         var requestExecutor = new RequestExecutor(context);
@@ -61,37 +61,58 @@ public class Application {
             fileName = args[0];
         else
             cli.print("application.error.no_file_provided");
-
         var fileLoader = new SpaceMarineCSVFileLoader(fileName);
         context.setDataLoader(fileLoader);
 
-        var dataProvider = loadData(fileLoader, cli);
+        var dataProvider = Application.loadData(fileLoader, cli);
         context.setDataProvider(dataProvider);
 
         var fileUnloader = new SpaceMarineCSVFileUnloader(fileName);
         context.setDataUnloader(fileUnloader);
 
-        context.setIsRunning(true);
-
         cli.print("commandline.welcome");
-        while(context.getIsRunning())
-            cli.acceptUserInput();
-    }
 
-    public static DataProvider loadData(FileLoader<SpaceMarine> fileLoader, CommandLineUserInterface cli){
-        var data = new PriorityQueue<SpaceMarine>();
-        var date = new Date();
+        context.setIsRunning(true);
         try {
-            var errors = fileLoader.load(data);
-            date = new Date(Files.readAttributes(fileLoader.path(), BasicFileAttributes.class).creationTime().toMillis());
-            errors.forEach(err->cli.print(err.getLine(), err.getData()));
+            var server = new ServerSocket(42069);
+            cli.print("server.open_on_port", server.getLocalPort());
+            var connection = awaitConnection(server, context);
+            if(connection.isEmpty()){
+                //todo: logging
+            }
         }catch(IOException e){
-            if(e instanceof FileNotFoundException)
-                cli.print("application.error.no_such_file");
-            else e.printStackTrace();
+            e.printStackTrace();//todo:logging
+            System.exit(-1);
         }
 
-        return new CollectionProvider.PriorityQueueProvider(date, data);
+        Runtime.getRuntime().addShutdownHook(new Thread(()->
+        {
+            try {
+                fileUnloader.save(dataProvider);
+            } catch (IOException e) {
+                e.printStackTrace();//todo: logging
+            }
+        }));
+
+        while(context.getIsRunning()) {
+            //cli.acceptUserInput();
+            clients.forEach(UserInterface::acceptUserInput);
+            if(clients.isEmpty()) context.setIsRunning(false);
+        }
+
+    }
+
+    private static Optional<Socket> awaitConnection(ServerSocket server, ApplicationContext ctx){
+        try {
+            var connection = server.accept();
+            System.out.println("Incoming connection from " + connection.getInetAddress().toString());
+            clients.add( new RemoteUserInterface(connection, ctx));
+
+            return Optional.of(connection);
+        } catch (IOException e) {
+            e.printStackTrace();//todo:logging
+        }
+        return Optional.empty();
     }
 
     private static void registerEvents(ApplicationContext ctx, CommandLineUserInterface cli){

@@ -16,7 +16,7 @@ public class SaveRequest extends Request {
     public Response execute(ApplicationContext ctx) {
         //todo: save request
         try {
-            ctx.getFileUnloader().save(ctx.getDataProvider());
+            ctx.getDataUnloader().save(ctx.getDataProvider());
             return Response.success("save");
         }catch(IOException e){
             return Response.fail("save", "application.error.save.unknown"); //todo: add details to responsefail

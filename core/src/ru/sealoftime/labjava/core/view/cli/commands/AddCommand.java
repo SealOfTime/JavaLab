@@ -20,8 +20,8 @@ public class AddCommand extends ObjectCommand {
     public Optional<Request> constructRequest(TextExecutionContext tec, ApplicationContext ctx, String[] data) {
         var objectOrNot = this.constructSpaceMarine(tec, ctx);
         return objectOrNot.map(sm -> {
-            sm.setId(SpaceMarine.newId());
-            sm.setCreationDate(new Date());
+//            sm.setId(SpaceMarine.newId());
+//            sm.setCreationDate(new Date());
             return new AddRequest(sm);
         });
     }

@@ -26,7 +26,7 @@ public abstract class ObjectCommand extends Command {
     }
 
     public Optional<SpaceMarine> constructSpaceMarine(TextExecutionContext tec, ApplicationContext ctx){
-        this.numberFormat = NumberFormat.getInstance(ctx.getCurrentLanguage());
+        this.numberFormat = NumberFormat.getInstance(ctx.getLocalization().getLocale());
         this.validator = new Validator();
         var object = new SpaceMarine();
         this.tec = tec;

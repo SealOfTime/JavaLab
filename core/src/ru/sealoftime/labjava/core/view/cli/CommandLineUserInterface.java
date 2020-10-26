@@ -1,16 +1,16 @@
 package ru.sealoftime.labjava.core.view.cli;
 
-import ru.sealoftime.labjava.core.Application;
 import ru.sealoftime.labjava.core.ApplicationContext;
-import ru.sealoftime.labjava.core.model.response.ListResponse;
 import ru.sealoftime.labjava.core.model.response.Response;
 import ru.sealoftime.labjava.core.util.Either;
+import ru.sealoftime.labjava.core.util.FormattedString;
 import ru.sealoftime.labjava.core.view.UserInterface;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
 
-public class CommandLineUserInterface extends UserInterface implements TextExecutionContext{
+public class CommandLineUserInterface implements TextExecutionContext, UserInterface{
 
     public Scanner sc;
 
@@ -26,7 +26,9 @@ public class CommandLineUserInterface extends UserInterface implements TextExecu
         this.history = new LinkedList<>();
     }
 
+    @Override
     public void acceptUserInput() {
+
         if (sc.hasNextLine()){
             String rawInput = sc.nextLine().trim();
             if(rawInput.isBlank())
@@ -44,33 +46,33 @@ public class CommandLineUserInterface extends UserInterface implements TextExecu
                 var req = commandOrNone.constructRequest(this, this.ctx, input);
                 if(req.isPresent()) {
                     var resp = this.ctx.getRequestExecutor().execute(req.get());
-                    if(resp.getStatus().equals(Response.ResponseStatus.SUCCESS)){
-                        this.ctx.getEventBus().notify(resp);
-//                        this.print("commandline.command." + command + ".success");
-//                        if(resp instanceof ListResponse){
-//                            var listResponse = (ListResponse<?>)resp;
-//                            for(Object o : listResponse.getData())
-//                                this.print(o.toString());
-//                        }
-                    }else
-                        this.print(((Response.ErrorResponse)resp).getErrorMessage());
+                    if(resp != null)
+                        if(resp.getStatus().equals(Response.ResponseStatus.SUCCESS)){
+                            this.ctx.getEventBus().notify(resp);
+    //                        this.print("commandline.command." + command + ".success");
+    //                        if(resp instanceof ListResponse){
+    //                            var listResponse = (ListResponse<?>)resp;
+    //                            for(Object o : listResponse.getData())
+    //                                this.print(o.toString());
+    //                        }
+                        }else
+                            this.print(((Response.ErrorResponse)resp).getErrorMessage());
                 }
             }
         }
     }
     public void printHistory(){
         this.print("commandline.response.history");
-        for(String command : history)
-            this.print(command);
+        this.history.forEach((cmd)->
+                this.print("commandline.response.history.element", cmd));
     }
 
+    public void print(FormattedString fs){
+        this.print(fs.getLine(), fs.getData());
+    }
     @Override
     public void print(String rawOutput, Object... data){
-        try {
-            System.out.printf(this.ctx.getCurrentLanguageBundle().getString(rawOutput), data);
-        }catch(MissingResourceException e){
-            System.out.println(rawOutput + " " + Arrays.deepToString(data));
-        }
+        System.out.println(ctx.getLocalization().localize(rawOutput, data));
     }
 
     public boolean confirm(String query){
