@@ -1,5 +1,7 @@
 package ru.sealoftime.labjava.server;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.jmx.Server;
 import ru.sealoftime.labjava.core.ApplicationContext;
 import ru.sealoftime.labjava.core.model.events.Event;
 import ru.sealoftime.labjava.core.model.requests.Request;
@@ -27,7 +29,8 @@ public class RemoteUserInterface implements UserInterface, Closeable {
         try {
             var sizeBytes = this.remoteIn.readNBytes(4); //read size
             if(sizeBytes.length > 0) {
-                var size = ByteBuffer.wrap(sizeBytes).getInt(); //hopefully, size TODO: fix potential crashes
+                var size = ByteBuffer.wrap(sizeBytes).getInt();
+                ServerApplication.logger.info(String.format("Incoming message of size %d from %s", size, remote.getInetAddress()));
                 var reqBytes = this.remoteIn.readNBytes(size);  //read the object
                 if(reqBytes.length > 0) {
                     var req = reconstructRequest(reqBytes);
@@ -35,12 +38,11 @@ public class RemoteUserInterface implements UserInterface, Closeable {
                     return;
                 }
             }
-            System.out.print("Client has died.");
+            ServerApplication.logger.info("Client has disconnected.");
             ServerApplication.clients.remove(this);
             //TODO: Connection has been closed
         } catch (IOException e) {
-            //e.printStackTrace(); //todo: logging
-            System.out.print("Client has died.");
+            ServerApplication.logger.error("Client has died.");
             ServerApplication.clients.remove(this);
         } catch (ClassNotFoundException e) {
             e.printStackTrace(); //todo: logging
@@ -53,7 +55,7 @@ public class RemoteUserInterface implements UserInterface, Closeable {
                     this.constructMessage(event)
             );
         }catch(IOException e){
-            e.printStackTrace(); //todo: logging
+            ServerApplication.logger.error(ctx.getLocalization().localize("server.error.unexpected", e.getMessage()));
         }
     }
 
@@ -63,7 +65,7 @@ public class RemoteUserInterface implements UserInterface, Closeable {
 
         var readObject = remoteObjectIn.readObject();
 
-        System.out.println("Receive " + readObject.getClass().getSimpleName() + " from " + this.remote.getInetAddress().toString()); //TODO: logging
+        ServerApplication.logger.info(String.format("Receive %s from %s", readObject.getClass().getSimpleName(), this.remote.getInetAddress().toString())); //TODO: logging
 
         if (readObject instanceof Request) {
             return (Request)readObject;

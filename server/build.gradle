@@ -1,6 +1,7 @@
 plugins{
     id 'com.github.johnrengelman.shadow'
     id 'java'
+    id 'idea'
 }
 
 sourceSets{
@@ -19,6 +20,9 @@ repositories{
 dependencies{
     compileOnly 'org.projectlombok:lombok:1.18.16'
     annotationProcessor 'org.projectlombok:lombok:1.18.16'
+
+    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.13.3'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.13.3'
 
     implementation 'org.apache.commons:commons-csv:1.8'
     implementation 'net.sf.oval:oval:1.50'

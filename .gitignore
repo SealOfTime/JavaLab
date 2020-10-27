@@ -3,3 +3,8 @@
 
 # Ignore Gradle build output directory
 build
+./out
+
+lab-java.iml
+lab-java.ipr
+lab-java.iws

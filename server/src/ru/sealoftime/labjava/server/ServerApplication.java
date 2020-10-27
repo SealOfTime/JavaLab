@@ -1,5 +1,8 @@
 package ru.sealoftime.labjava.server;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import ru.sealoftime.labjava.core.Application;
 import ru.sealoftime.labjava.core.ApplicationContext;
 import ru.sealoftime.labjava.core.model.EventBus;
@@ -36,6 +39,7 @@ import java.util.*;
 
 @SuppressWarnings("DuplicatedCode")
 public class ServerApplication {
+    public static final Logger logger = LogManager.getLogger("Server");
 
     public static List<RemoteUserInterface> clients = new LinkedList<>();
     public static void main(String[] args) {
@@ -47,7 +51,12 @@ public class ServerApplication {
         context.setLocalization(localization);
 
         var cr  = registerCommands();
-        var cli = new CommandLineUserInterface(cr, context);
+        var cli = new CommandLineUserInterface(cr, context){
+            @Override
+            public void print(String rawOutput, Object... data) {
+                logger.info(localization.localize(rawOutput, data));
+            }
+        };
 
         var eventBus = new RemoteEventBus();
         context.setEventBus(eventBus);
@@ -61,7 +70,7 @@ public class ServerApplication {
         if(args.length > 0 && args[0] != null && !args[0].isEmpty())
             fileName = args[0];
         else
-            cli.print("application.error.no_file_provided");
+            logger.error(localization.localize("application.error.no_file_provided"));
         var fileLoader = new SpaceMarineCSVFileLoader(fileName);
         context.setDataLoader(fileLoader);
 
@@ -75,16 +84,16 @@ public class ServerApplication {
         try {
             var server = new ServerSocket(42069);
             cli.print("server.open_on_port", server.getLocalPort());
-            cli.print("commandline.welcome");   
-            var connection = awaitConnection(server, context);
+            cli.print("commandline.welcome");
+            var connection = awaitConnection(server, cli, context);
             if(connection.isEmpty()){
                 //todo: logging
             }
         }catch(BindException e){
-            System.out.println("Port 42069 is already occupied.");//todo: logging
+            logger.error(localization.localize("server.port_occupied"));//todo: logging
         }
         catch(IOException e) {
-            e.printStackTrace();//todo:logging
+            logger.error(localization.localize("server.error.unexpected", e.getMessage()));//todo:logging
             System.exit(-1);
         }
 
@@ -93,7 +102,7 @@ public class ServerApplication {
             try {
                 fileUnloader.save(dataProvider);
             } catch (IOException e) {
-                e.printStackTrace();//todo: logging
+                logger.error(localization.localize("server.error.unexpected", e.getMessage()));//todo: logging
             }
         }));
 
@@ -105,15 +114,14 @@ public class ServerApplication {
 
     }
 
-    private static Optional<Socket> awaitConnection(ServerSocket server, ApplicationContext ctx){
+    private static Optional<Socket> awaitConnection(ServerSocket server, CommandLineUserInterface cli, ApplicationContext ctx){
         try {
             var connection = server.accept();
-            System.out.println("Incoming connection from " + connection.getInetAddress().toString());
+            cli.print("server.incoming_connection", connection.getInetAddress());
             clients.add( new RemoteUserInterface(connection, ctx));
-
             return Optional.of(connection);
         } catch (IOException e) {
-            e.printStackTrace();//todo:logging
+            logger.error(ctx.getLocalization().localize("server.error.unexpected", e.getMessage()));
         }
         return Optional.empty();
     }
