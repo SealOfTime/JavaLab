@@ -52,9 +52,9 @@ public class ClientApplication {
         registerEvents(context,cli);
 
         var address = getArgOrDefault("localhost", args, 0, "no_address", cli);
-        int port = 5000;
+        int port = 42069;
         try {
-            port = Integer.parseInt(getArgOrDefault("5000", args, 1, "no_port", cli));
+            port = Integer.parseInt(getArgOrDefault("42069", args, 1, "no_port", cli));
         }catch(NumberFormatException pe){
             cli.print("application.error.invalid_port");
         }

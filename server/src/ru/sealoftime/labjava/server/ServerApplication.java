@@ -29,6 +29,7 @@ import ru.sealoftime.labjava.core.view.cli.commands.ObjectCommand;
 import ru.sealoftime.labjava.core.view.cli.commands.PrintFieldAscedingChapterCommand;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
@@ -70,17 +71,19 @@ public class ServerApplication {
         var fileUnloader = new SpaceMarineCSVFileUnloader(fileName);
         context.setDataUnloader(fileUnloader);
 
-        cli.print("commandline.welcome");
-
         context.setIsRunning(true);
         try {
             var server = new ServerSocket(42069);
             cli.print("server.open_on_port", server.getLocalPort());
+            cli.print("commandline.welcome");   
             var connection = awaitConnection(server, context);
             if(connection.isEmpty()){
                 //todo: logging
             }
-        }catch(IOException e){
+        }catch(BindException e){
+            System.out.println("Port 42069 is already occupied.");//todo: logging
+        }
+        catch(IOException e) {
             e.printStackTrace();//todo:logging
             System.exit(-1);
         }

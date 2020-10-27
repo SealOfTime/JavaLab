@@ -1,0 +1,31 @@
+plugins{
+    id 'com.github.johnrengelman.shadow'
+    id 'java'
+}
+
+sourceSets{
+    main {
+        java {
+            srcDirs = ['src/']
+        }
+        resources {
+            srcDirs = ['resources/']
+        }
+    }
+}
+repositories{
+    mavenCentral()
+}
+dependencies{
+    compileOnly 'org.projectlombok:lombok:1.18.16'
+    annotationProcessor 'org.projectlombok:lombok:1.18.16'
+
+    implementation 'org.apache.commons:commons-csv:1.8'
+    implementation 'net.sf.oval:oval:1.50'
+    implementation project(':core')
+}
+shadowJar{
+    manifest{
+        attributes 'Main-Class': 'ru.sealoftime.labjava.server.ServerApplication'
+    }
+}

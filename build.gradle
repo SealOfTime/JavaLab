@@ -1,0 +1,29 @@
+plugins{
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
+    id 'java'
+}
+repositories{
+    mavenCentral()
+}
+dependencies{
+    implementation 'org.apache.commons:commons-csv:1.8'
+    implementation 'net.sf.oval:oval:1.50'
+}
+
+allprojects{
+    java {
+        sourceCompatibility = JavaVersion.VERSION_11
+    }
+}
+
+
+//task compileServer(type: Copy){
+//    destinationDir = file("out/artifacts/server_jar")
+//    //archiveName = "server.jar"
+//    from(project(':server').tasks.named('shadowJar').get().getOutputs())
+//}
+//
+//task compileClient(type: Copy){
+//    destinationDir = file("out/artifacts/client_jar")
+//    from(project(':client').tasks.named('shadowJar').get().getOutputs())
+//}
