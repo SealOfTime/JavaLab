@@ -1,24 +1,22 @@
 package ru.sealoftime.labjava.client;
 
+import ru.sealoftime.labjava.client.model.ClientRequestExecutor;
+import ru.sealoftime.labjava.client.view.ClientLocalizationService;
 import ru.sealoftime.labjava.core.ApplicationContext;
 import ru.sealoftime.labjava.core.model.EventBus;
-import ru.sealoftime.labjava.core.model.RequestExecutor;
 import ru.sealoftime.labjava.core.model.data.concrete.SpaceMarine;
+import ru.sealoftime.labjava.core.model.data.concrete.UserData;
 import ru.sealoftime.labjava.core.model.data.concrete.Weapon;
 import ru.sealoftime.labjava.core.model.events.*;
 import ru.sealoftime.labjava.core.model.requests.Request;
+import ru.sealoftime.labjava.core.model.requests.network.NetworkRequest;
 import ru.sealoftime.labjava.core.model.requests.noargs.*;
 import ru.sealoftime.labjava.core.model.requests.object.AddRequest;
 import ru.sealoftime.labjava.core.model.requests.object.RemoveGreaterRequest;
 import ru.sealoftime.labjava.core.model.requests.object.UpdateRequest;
 import ru.sealoftime.labjava.core.model.requests.primitives.FilterLessThanWeaponTypeRequest;
 import ru.sealoftime.labjava.core.model.requests.primitives.RemoveByIdRequest;
-import ru.sealoftime.labjava.core.model.response.InfoResponse;
-import ru.sealoftime.labjava.core.model.response.ListResponse;
-import ru.sealoftime.labjava.core.model.response.Response;
-import ru.sealoftime.labjava.core.model.response.SumOfHealthResponse;
-import ru.sealoftime.labjava.core.util.Either;
-import ru.sealoftime.labjava.core.view.LocalizationService;
+import ru.sealoftime.labjava.core.model.response.*;
 import ru.sealoftime.labjava.core.view.cli.*;
 import ru.sealoftime.labjava.core.view.cli.commands.ArglessCommand;
 import ru.sealoftime.labjava.core.view.cli.commands.ExecuteScriptCommand;
@@ -32,16 +30,13 @@ import java.util.Optional;
 public class ClientApplication {
     public static ConnectionManager connection;
 
+    public static UserData session;
     public static void main(String[] args) {
-        var context = new ApplicationContext();
-       // System.setProperty("java.util.PropertyResourceBundle.encoding", "UTF-8");
-        var locale = Locale.forLanguageTag("ru");
+        var context = new ClientApplicationContext();
 
+        var locale = Locale.forLanguageTag("ru");
         var localization =new ClientLocalizationService(locale);
         context.setLocalization(localization);
-
-        var cr  = registerCommands();
-        var cli = new CommandLineUserInterface(cr, context);
 
         var eventBus = new EventBus();
         context.setEventBus(eventBus);
@@ -49,30 +44,22 @@ public class ClientApplication {
         var requestExecutor = new ClientRequestExecutor(context);
         context.setRequestExecutor(requestExecutor);
 
-        registerEvents(context,cli);
+        var cli = initWelcomeDialogue(context);
 
-        var address = getArgOrDefault("localhost", args, 0, "no_address", cli);
-        int port = 42069;
-        try {
-            port = Integer.parseInt(getArgOrDefault("42069", args, 1, "no_port", cli));
-        }catch(NumberFormatException pe){
-            cli.print("application.error.invalid_port");
-        }
-
-
-        connection = new ConnectionManager(address, port, context);
+        var addr  = cli.prompt( "client.prompt.address").orElse("localhost");
+        var port = cli.promptValue ("client.prompt.port", Integer::valueOf).orElse (42069);
+        connection = new ConnectionManager(addr, port, context);
         var errors = connection.connect();
 
         if(errors.isPresent()){
             cli.print(errors.get());//todo: logging
         }else{
-            //TODO: get data send ShowRequest, receive a ShowRequest to renew the content of local copy
             requestExecutor.execute(new ShowRequest());
+
             context.setIsRunning(true);
-            cli.print("commandline.welcome");
 
             var cliThread = new Thread(()->{
-                while(context.getIsRunning()) cli.acceptUserInput();
+                while(context.getIsRunning()) context.getUi().acceptUserInput();
             }, "UserInterface");
 
             cliThread.start();
@@ -85,14 +72,53 @@ public class ClientApplication {
 
         connection.close();
     }
-    private static String getArgOrDefault(String defaults, String[] args, int index, String error, CommandLineUserInterface cli){
-        var value = defaults;
-        if(args.length > index && args[index] != null && !args[index].isEmpty())
-             value = args[index];
-        else
-            cli.print("application.error." + error);
-        return value;
+
+    private static Optional<UserData> getUserData(CommandLineUserInterface cli){
+        var username = cli.prompt("client.prompt.username");
+        if(username.isEmpty()) return Optional.empty();
+        var password = cli.prompt("client.prompt.password");
+        if(password.isEmpty()) return Optional.empty();
+        return Optional.of(new UserData(username.get(), password.get()));
     }
+
+    private static CommandLineUserInterface initWelcomeDialogue(ClientApplicationContext ctx){
+        var cmds = new CommandRegistry();
+        cmds.register("login", new Command() {
+            @Override
+            public Optional<Request> constructRequest(TextExecutionContext tec, ApplicationContext ctx, String[] data) {
+                if(data.length < 3)
+                    return Optional.empty();
+                return Optional.of(new NetworkRequest.LoginRequest(new UserData(data[1], data[2])));
+            }
+        });
+        cmds.register("register", new Command() {
+            @Override
+            public Optional<Request> constructRequest(TextExecutionContext tec, ApplicationContext ctx, String[] data) {
+                if(data.length < 3)
+                    return Optional.empty();
+                return Optional.of(new NetworkRequest.RegisterRequest(new UserData(data[1], data[2])));
+            }
+        });
+        var cli = new CommandLineUserInterface(cmds, ctx);
+
+        ctx.setUi(cli);
+        ctx.getEventBus().subscribe(LoginResponse.class, (e)->{
+            cli.print("commandline.welcome");
+            registerEvents(ctx,cli);
+            session = ((LoginResponse)e).data;
+            var cr  = registerCommands();
+            cli.setCommandRegistry(cr);
+        });
+        ctx.getEventBus().subscribe(Response.ErrorResponse.class, (err)->{
+            var resp = (Response.ErrorResponse)err;
+            if(resp.getCommand().equals("login"))
+                cli.print(resp.getErrorMessage());
+        });
+
+        cli.print("client.login");
+        return cli;
+    }
+
 
     private static void registerEvents(ApplicationContext ctx, CommandLineUserInterface cli){
         var bus = ctx.getEventBus();
@@ -107,7 +133,6 @@ public class ClientApplication {
         bus.subscribe(UpdateObjectEvent.class, handler::onUpdate);
         bus.subscribe(ExitEvent.class, handler::onExit);
         bus.subscribe(SumOfHealthEvent.class, handler::onSumOfHealth);
-        //bus.subscribe(HistoryEvent.class, handler::onHistory);
         bus.subscribe(PrintEvent.class, handler::onPrint);
 
         var responseHandler = new CommandLineResponseHandler(cli);

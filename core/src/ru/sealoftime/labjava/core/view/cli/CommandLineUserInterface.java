@@ -4,17 +4,23 @@ import ru.sealoftime.labjava.core.ApplicationContext;
 import ru.sealoftime.labjava.core.model.response.Response;
 import ru.sealoftime.labjava.core.util.Either;
 import ru.sealoftime.labjava.core.util.FormattedString;
+import ru.sealoftime.labjava.core.util.UnsafeFunction;
 import ru.sealoftime.labjava.core.view.UserInterface;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
 
-public class CommandLineUserInterface implements TextExecutionContext, UserInterface{
+public class CommandLineUserInterface implements TextExecutionContext, UserInterface, Closeable{
 
     public Scanner sc;
 
     private CommandRegistry commandRegistry;
+    public void setCommandRegistry(CommandRegistry cr){
+        this.commandRegistry = cr;
+    }
     private ApplicationContext ctx;
 
     private LinkedList<String> history;
@@ -100,6 +106,20 @@ public class CommandLineUserInterface implements TextExecutionContext, UserInter
         }
         return Optional.empty();
     }
+    public <T> Optional<T> promptValue(String query, UnsafeFunction<String, T, ? extends Exception> parser){
+        Either<T, String> result = this.prompt(query, (s)->{
+            try{
+                return Either.left(parser.apply(s));
+            }catch(Exception e){
+                return Either.right("");
+            }
+        });
+        if(result.isLeft())
+            return Optional.of(result.left());
+        if(!result.right().isEmpty())
+            print(result.right());
+        return Optional.empty();
+    }
 
     @Override
     public <T> Either<T, String> prompt(String query, Function<String, Either<T, String>> parser){
@@ -122,5 +142,10 @@ public class CommandLineUserInterface implements TextExecutionContext, UserInter
             parsedPrompt = this.prompt(query, parser);
         }
         return parsedPrompt;
+    }
+
+    @Override
+    public void close() throws IOException {
+        this.sc.close();
     }
 }

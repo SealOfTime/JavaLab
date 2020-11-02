@@ -30,6 +30,8 @@ import ru.sealoftime.labjava.core.view.cli.commands.ArglessCommand;
 import ru.sealoftime.labjava.core.view.cli.commands.ExecuteScriptCommand;
 import ru.sealoftime.labjava.core.view.cli.commands.ObjectCommand;
 import ru.sealoftime.labjava.core.view.cli.commands.PrintFieldAscedingChapterCommand;
+import ru.sealoftime.labjava.server.data.PSQLDataLoader;
+import ru.sealoftime.labjava.server.data.PSQLDataUnloader;
 
 import java.io.IOException;
 import java.net.BindException;
@@ -40,7 +42,7 @@ import java.util.*;
 @SuppressWarnings("DuplicatedCode")
 public class ServerApplication {
     public static final Logger logger = LogManager.getLogger("Server");
-
+    public static final DatabaseConnectionManager dcm = new DatabaseConnectionManager();
     public static List<RemoteUserInterface> clients = new LinkedList<>();
     public static void main(String[] args) {
         var context = new ApplicationContext();
@@ -71,24 +73,25 @@ public class ServerApplication {
             fileName = args[0];
         else
             logger.error(localization.localize("application.error.no_file_provided"));
-        var fileLoader = new SpaceMarineCSVFileLoader(fileName);
-        context.setDataLoader(fileLoader);
+        var dataLoader = new PSQLDataLoader(dcm);
+        context.setDataLoader(dataLoader);
 
-        var dataProvider = Application.loadData(fileLoader, cli);
+        var dataProvider = dataLoader.initDataProvider();
         context.setDataProvider(dataProvider);
 
-        var fileUnloader = new SpaceMarineCSVFileUnloader(fileName);
-        context.setDataUnloader(fileUnloader);
+        var dataUnloader = new PSQLDataUnloader();
+        context.setDataUnloader(dataUnloader);
 
         context.setIsRunning(true);
         try {
             var server = new ServerSocket(42069);
             cli.print("server.open_on_port", server.getLocalPort());
             cli.print("commandline.welcome");
-            var connection = awaitConnection(server, cli, context);
-            if(connection.isEmpty()){
-                //todo: logging
+
+            while(context.getIsRunning()) {
+                var connection = awaitConnection(server, cli, context);
             }
+            System.exit(0);
         }catch(BindException e){
             logger.error(localization.localize("server.port_occupied"));//todo: logging
         }
@@ -97,20 +100,14 @@ public class ServerApplication {
             System.exit(-1);
         }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(()->
-        {
-            try {
-                fileUnloader.save(dataProvider);
-            } catch (IOException e) {
-                logger.error(localization.localize("server.error.unexpected", e.getMessage()));//todo: logging
-            }
-        }));
-
-        while(context.getIsRunning()) {
-            //cli.acceptUserInput();
-            clients.forEach(UserInterface::acceptUserInput);
-            if(clients.isEmpty()) context.setIsRunning(false);
-        }
+//        Runtime.getRuntime().addShutdownHook(new Thread(()->
+//        {
+//            try {
+//                fileUnloader.save(dataProvider);
+//            } catch (IOException e) {
+//                logger.error(localization.localize("server.error.unexpected", e.getMessage()));//todo: logging
+//            }
+//        }));
 
     }
 
@@ -118,7 +115,13 @@ public class ServerApplication {
         try {
             var connection = server.accept();
             cli.print("server.incoming_connection", connection.getInetAddress());
-            clients.add( new RemoteUserInterface(connection, ctx));
+            final var ui = new RemoteUserInterface(connection, ctx);
+            clients.add(ui);
+            new Thread(()->{
+                while(ui.isConnected)
+                    ui.acceptUserInput();
+            }, "Connection: " + connection.getInetAddress().toString() + ":" + connection.getPort())
+                    .start();
             return Optional.of(connection);
         } catch (IOException e) {
             logger.error(ctx.getLocalization().localize("server.error.unexpected", e.getMessage()));

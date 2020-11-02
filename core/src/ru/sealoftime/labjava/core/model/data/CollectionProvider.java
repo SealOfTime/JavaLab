@@ -12,7 +12,7 @@ import java.util.Spliterator;
 public abstract class CollectionProvider implements DataProvider{
     @Delegate
     private Collection<SpaceMarine> collection;
-
+    public Collection<SpaceMarine> getCollection(){ return this.collection; }
     private final Date creationDate;
 
     private final String type;

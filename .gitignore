@@ -8,3 +8,5 @@ build
 lab-java.iml
 lab-java.ipr
 lab-java.iws
+
+./server/resources/credentials.properties

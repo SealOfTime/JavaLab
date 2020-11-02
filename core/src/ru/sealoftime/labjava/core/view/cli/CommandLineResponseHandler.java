@@ -34,6 +34,7 @@ public class CommandLineResponseHandler {
         callbacks.put("filter_less_than_weapon_type", this::onFilterLessThanWeaponType);
         callbacks.put("print_field_ascending_chapter", this::onPrintFieldAscendingChapter);
         callbacks.put("remove_by_id", this.simple("remove_by_id"));
+        callbacks.put("login", this.simple("login"));
     }
     public Consumer<Response> simple(String name){
         return (resp)->{

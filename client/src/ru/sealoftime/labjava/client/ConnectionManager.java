@@ -1,5 +1,6 @@
 package ru.sealoftime.labjava.client;
 
+import ru.sealoftime.labjava.client.model.AccumulatingReader;
 import ru.sealoftime.labjava.core.ApplicationContext;
 import ru.sealoftime.labjava.core.model.requests.Request;
 import ru.sealoftime.labjava.core.util.FormattedString;
